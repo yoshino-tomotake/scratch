@@ -36,13 +36,15 @@ void worker_thread()
         std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
         std::cout  << "thread id: " << std::this_thread::get_id() << "," << std::put_time(std::localtime(&time),"%F %T") << std::endl;;
         
-        std::unique_lock uq(mutex);
-        while(!cond1)
         {
-            cv.wait(uq);
+            std::unique_lock uq(mutex);
+            //while(!cond1)
+            //{
+                cv.wait(uq,[](){return cond1;});
+            //}
+            cond1 = false; 
+            //uq.unlock();
         }
-        cond1 = false; 
-        uq.unlock();
         cv.notify_one();
     }
 }
@@ -51,17 +53,20 @@ void producer_thread()
 {
     while(true)
     {
-        std::unique_lock lg(mutex);
-        cond1 = true;
-        lg.unlock();
-        cv.notify_one();
-
-        std::unique_lock uq (mutex);
-        while(cond1)
         {
-            cv.wait(uq);
+            std::unique_lock lg(mutex);
+            cond1 = true;
+            //lg.unlock();
         }
-        uq.unlock();
+        cv.notify_one();
+        {
+            std::unique_lock uq (mutex);
+            //while(cond1)
+            //{
+                cv.wait(uq,[](){return !cond1;});
+            //}
+        }
+        //uq.unlock();
     }
 }
 
